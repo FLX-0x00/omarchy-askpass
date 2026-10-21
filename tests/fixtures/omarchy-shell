@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -eu
+[[ ${1:-} == -q ]] && shift
+[[ $2 == dismiss ]] && exit 0
+[[ $2 == request ]] || exit 1
+mkdir "$TESTROOT/active"
+trap 'rmdir "$TESTROOT/active"' EXIT
+sleep 0.05
+[[ $(stat -c %a "$3") == 700 && $(stat -c %a "$3/response") == 600 ]]
+printf '%s' "$6" > "$TESTROOT/command"
+case ${MODE:-success} in
+  success) printf '%s\n' 'test-only: spaces \ quotes' > "$3/response" ;;
+  cancel) printf '\n' > "$3/response" ;;
+  timeout) : ;;
+  invalid) printf 'invalid\n'; exit 0 ;;
+esac
+printf 'ok\n'

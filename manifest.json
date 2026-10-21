@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.flx-0x00.askpass",
+  "name": "Omarchy Askpass",
+  "version": "0.3.0",
+  "author": "FLX-0x00",
+  "license": "MIT",
+  "description": "Native sudo -A password overlay with the complete command, styled like Omarchy's Polkit dialog.",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "Askpass.qml"
+  }
+}

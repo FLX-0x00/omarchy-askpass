@@ -1,0 +1,16 @@
+name: Check
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  helper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Bash syntax
+        run: |
+          for file in bin/askpass tests/helper.sh tests/fixtures/omarchy-shell scripts/render-previews; do
+            bash -n "$file"
+          done
+      - name: Helper regression tests
+        run: bash tests/helper.sh

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# sudo -A -> Omarchy IPC -> private FIFO -> sudo (stdout).
+set -eu
+umask 077
+
+runtime=${XDG_RUNTIME_DIR:?A desktop session is required}
+wait_seconds=${OMARCHY_ASKPASS_TIMEOUT:-120}
+[[ -d $runtime && -O $runtime && $wait_seconds =~ ^[1-9][0-9]*$ ]] || exit 1
+
+# Read sudo's real argv, not a caller-supplied display override. Single quotes
+# retain multiline shell scripts and make argument boundaries unambiguous.
+mapfile -d '' -t args < "/proc/$PPID/cmdline"
+(( ${#args[@]} )) || exit 1
+[[ ${args[0]##*/} == sudo || ${args[0]##*/} == sudoedit ]] || exit 1
+cmdline=''
+for arg in "${args[@]}"; do
+  if [[ -n $arg && $arg != *[^a-zA-Z0-9_./:=,+@%-]* ]]; then
+    quoted=$arg
+  elif [[ $arg == *[$'\001'-$'\011'$'\013'-$'\037'$'\177'$'\u061c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2066\u2067\u2068\u2069']* ]]; then
+    # Make invisible controls (including bidi overrides) visible in the UI.
+    LC_ALL=C printf -v quoted '%q' "$arg"
+  else
+    quoted="'${arg//\'/\'\\\'\'}'"
+  fi
+  cmdline+="${cmdline:+ }$quoted"
+done
+
+# Take the lock before opening a request; queued prompts cannot replace one
+# another. All filesystem objects are private to this desktop user.
+exec 9>"$runtime/omarchy-askpass.lock"
+flock -w "$wait_seconds" 9 || exit 1
+dir=$(mktemp -d "$runtime/omarchy-askpass.XXXXXX")
+cleanup() {
+  omarchy-shell -q askpass dismiss "$dir" >/dev/null 2>&1 || true
+  rm -rf -- "$dir"
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+mkfifo -m 600 "$dir/response"
+exec 3<>"$dir/response"
+
+reply=$(omarchy-shell askpass request "$dir" "${1:-Password:}" \
+  "${OMARCHY_ASKPASS_REASON:-}" "$cmdline")
+[[ $reply == ok ]] || exit 1
+IFS= read -r -t "$wait_seconds" password <&3 || exit 1
+[[ -n $password ]] || exit 1
+printf '%s\n' "$password"
