@@ -3,6 +3,10 @@
 A native Quickshell password overlay for `sudo -A`, with the **complete command**
 shown before you type. Uses Omarchy's Polkit colors, typography, borders and scrim.
 
+Especially useful for **AI coding agents working on your own Omarchy machine**:
+when an agent needs sudo without an interactive terminal, you can inspect the
+command and enter your password directly in the desktop overlay.
+
 ![Omarchy Askpass showing an example sudo command](preview.png)
 
 - Full argument list, including quoted arguments and multiline shell scripts.
@@ -49,6 +53,25 @@ Optional environment variables:
 | --- | --- | --- |
 | `OMARCHY_ASKPASS_REASON` | sudo's prompt | Short heading above the command. |
 | `OMARCHY_ASKPASS_TIMEOUT` | `120` | Positive integer seconds for queue/response waits. The overlay also expires after 120 seconds. |
+
+### Local AI coding agents
+
+Coding agents such as OpenCode, Claude Code or Codex often run shell commands
+without a TTY, so a normal sudo password prompt cannot be answered there.
+Askpass provides a desktop prompt while the agent waits for its command to finish.
+The agent does not need to ask for your password in chat or handle it itself.
+
+Launch your agent from a terminal with `SUDO_ASKPASS` exported as above, so it
+inherits the helper path and your desktop-session environment. Tell it to use
+`sudo -A` for commands that require elevation. It can optionally add a short reason:
+
+```bash
+OMARCHY_ASKPASS_REASON='Check the effective user' sudo -A -- /usr/bin/id -u
+```
+
+When authentication is needed, inspect the full command, then enter your password
+or press Escape to cancel. This uses normal sudo policy and timestamp caching;
+it does not grant the agent unrestricted privileges or require `NOPASSWD`.
 
 ## Update and remove
 
